@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>landpyre | LANDFIRE data, beautifully delivered</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Prism.js for Code Highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        void: '#0B0E14',
+                        surface: '#10131a',
+                        'surface-low': '#191c22',
+                        'surface-high': '#272a31',
+                        'surface-bright': '#363940',
+                        'surface-highest': '#32353c',
+                        primary: '#98cbff',
+                        secondary: '#acd198',
+                        tertiary: '#ecc328',
+                        'on-surface': '#e1e2eb',
+                        'outline-variant': '#41474f',
+                    },
+                    backgroundImage: {
+                        'python-hero': 'linear-gradient(135deg, #2a5882 0%, #151b24 40%, #151b24 60%, #7d671c 100%)',
+                        'pythonic-glow': 'linear-gradient(135deg, #98cbff 0%, #ecc328 100%)'
+                    },
+                    fontFamily: {
+                        display: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    boxShadow: {
+                        ambient: '0px 24px 48px rgba(0, 0, 0, 0.4)',
+                    },
+                    animation: {
+                        'gradient-shift': 'gradient-shift 5s ease-in-out infinite',
+                        blob: 'blob 15s infinite alternate',
+                        'fade-in': 'fadeIn 0.3s ease-in-out forwards',
+                    },
+                    keyframes: {
+                        'gradient-shift': {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        },
+                        blob: {
+                            "0%": { transform: "translate(0px, 0px) scale(1)" },
+                            "33%": { transform: "translate(40px, -60px) scale(1.1)" },
+                            "66%": { transform: "translate(-30px, 30px) scale(0.9)" },
+                            "100%": { transform: "translate(0px, 0px) scale(1)" }
+                        },
+                        fadeIn: {
+                            "0%": { opacity: "0", transform: "translateY(10px)" },
+                            "100%": { opacity: "1", transform: "translateY(0)" }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Google Fonts Import for the new Ecological Architect Typography */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap');
+
+        body {
+            background-color: #0B0E14;
+            color: #e1e2eb;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0B0E14;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #272a31;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #41474f;
+        }
+
+        /* Ghost Border Utilities */
+        .ghost-border {
+            border: 1px solid rgba(65, 71, 79, 0.15);
+        }
+
+        .ghost-border-b {
+            border-bottom: 1px solid rgba(65, 71, 79, 0.15);
+        }
+
+        .ghost-border-t {
+            border-top: 1px solid rgba(65, 71, 79, 0.15);
+        }
+
+        /* Animated Python Text Gradient */
+        .animate-text-python {
+            background: linear-gradient(-45deg, #98cbff, #ecc328, #98cbff, #ecc328);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 6s ease infinite;
+        }
+
+        /* Code Block Copy Button & Overrides */
+        pre[class*="language-"] {
+            position: relative;
+            border-radius: 16px;
+            margin: 1.5rem 0;
+            background: #32353c !important;
+            border: none;
+            padding: 1.5rem !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            box-shadow: 0px 24px 48px rgba(0, 0, 0, 0.2);
+        }
+
+        code[class*="language-"] {
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: #191c22;
+            border: 1px solid rgba(65, 71, 79, 0.15);
+            color: #e1e2eb;
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            z-index: 10;
+        }
+
+        .copy-button:hover {
+            background: #272a31;
+            border-color: rgba(65, 71, 79, 0.5);
+        }
+
+        /* Terminal Emulation */
+        .terminal-window {
+            background: #32353c;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0px 24px 48px rgba(0, 0, 0, 0.4);
+        }
+
+        .terminal-header {
+            background: #191c22;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #41474f;
+        }
+
+        .terminal-body {
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #e1e2eb;
+        }
+    </style>
+</head>
+
+<body class="antialiased relative bg-void">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-surface/70 backdrop-blur-[16px] ghost-border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-fire text-tertiary text-2xl"></i>
+                    <span class="font-display font-extrabold text-xl tracking-tight text-on-surface">landpyre</span>
+                </div>
+
+                <!-- Nav Links -->
+                <div class="hidden md:flex items-center gap-8 font-body font-medium">
+                    <a href="#features" class="text-on-surface/80 hover:text-on-surface transition-colors">Features</a>
+                    <a href="#install" class="text-on-surface/80 hover:text-on-surface transition-colors">Install</a>
+                    <a href="#quickstart" class="text-on-surface/80 hover:text-on-surface transition-colors">Quick
+                        Start</a>
+                    <a href="#reference"
+                        class="text-on-surface/80 hover:text-on-surface transition-colors">Reference</a>
+                </div>
+
+                <!-- Social Links -->
+                <div class="hidden md:flex items-center gap-3">
+                    <a href="https://github.com/samapriya" target="_blank"
+                        class="p-2 text-on-surface hover:text-primary transition-colors bg-surface-low rounded-[8px] ghost-border">
+                        <i class="ph ph-github-logo text-xl"></i>
+                    </a>
+                    <a href="https://linkedin.com/in/samapriya" target="_blank"
+                        class="p-2 text-on-surface hover:text-[#0a66c2] transition-colors bg-surface-low rounded-[8px] ghost-border">
+                        <i class="ph ph-linkedin-logo text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div
+            class="bg-surface-low rounded-[16px] shadow-ambient relative overflow-hidden border border-outline-variant/20">
+            <!-- Wave Background Animation Elements -->
+            <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-[#0B0E14] via-[#10131a]/80 to-[#151b24] z-[-1]">
+                </div>
+                <div
+                    class="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#2a5882] rounded-full mix-blend-color-dodge filter blur-[100px] opacity-60 animate-blob">
+                </div>
+                <div class="absolute top-[20%] right-[-10%] w-[50%] h-[50%] bg-[#7d671c] rounded-full mix-blend-color-dodge filter blur-[120px] opacity-30 animate-blob"
+                    style="animation-delay: 2s"></div>
+                <div class="absolute bottom-[-30%] left-[20%] w-[70%] h-[70%] bg-[#98cbff] rounded-full mix-blend-color-dodge filter blur-[120px] opacity-20 animate-blob"
+                    style="animation-delay: 4s"></div>
+            </div>
+
+            <div
+                class="relative z-10 p-10 md:p-16 lg:p-20 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+                <!-- Text Content -->
+                <div class="flex-1 max-w-2xl">
+                    <h1
+                        class="font-display font-extrabold text-5xl md:text-7xl leading-[1.1] tracking-[-0.02em] text-on-surface mb-6">
+                        Discover & Download,<br />
+                        <span class="animate-text-python">USGS LANDFIRE Data.</span>
+                    </h1>
+                    <p
+                        class="text-lg md:text-xl text-on-surface/90 mb-3 font-body max-w-2xl leading-relaxed font-semibold">
+                        Unofficial CLI and SDK for LANDFIRE data.
+                    </p>
+                    <p class="text-lg md:text-xl text-on-surface/90 mb-10 font-body max-w-2xl leading-relaxed">
+                        A simple set of tools for discovering, filtering, searching, and downloading datasets. Built
+                        with
+                        Pydantic, Click, and Rich.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="#quickstart"
+                            class="bg-pythonic-glow text-[#001d33] px-6 py-3 rounded-[8px] font-semibold transition-transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg">
+                            Get Started <i class="ph-bold ph-arrow-right"></i>
+                        </a>
+                        <a href="https://github.com/samapriya"
+                            class="border border-outline-variant/30 hover:border-outline-variant/60 bg-surface/10 hover:bg-surface/20 text-on-surface px-6 py-3 rounded-[8px] font-semibold transition-all flex items-center justify-center gap-2 backdrop-blur-sm">
+                            <i class="ph ph-github-logo"></i> View Github
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Logo Container -->
+                <div class="w-56 h-56 sm:w-64 sm:h-64 lg:w-80 lg:h-80 relative flex-shrink-0 group">
+                    <div
+                        class="absolute inset-0 bg-pythonic-glow rounded-full blur-[50px] opacity-30 group-hover:opacity-60 transition-opacity duration-700 animate-pulse">
+                    </div>
+                    <img src="https://i.imgur.com/bgpXO7o.png" alt="Landpyre Circular Logo"
+                        class="relative z-10 w-full h-full object-cover rounded-full border border-outline-variant/30 shadow-2xl transition-transform duration-700 hover:scale-[1.03]">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-surface-low">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="font-display font-bold text-3xl text-on-surface mb-12">What's new in v0.2.0</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature Cards -->
+                <div class="bg-surface-high p-8 rounded-[16px] ghost-border transition-all hover:-translate-y-1">
+                    <div
+                        class="w-12 h-12 rounded-[8px] bg-primary/10 flex items-center justify-center text-primary mb-6">
+                        <i class="ph ph-code text-2xl"></i>
+                    </div>
+                    <h3 class="font-display text-on-surface font-semibold text-lg mb-3">Typed SDK & Pydantic</h3>
+                    <p class="text-on-surface/70 text-sm leading-relaxed">Full <code
+                            class="font-mono text-primary bg-void px-1.5 py-0.5 rounded">LandpyreClient</code> with
+                        search, download, and verify. Robust models built entirely on Pydantic.</p>
+                </div>
+                <div class="bg-surface-high p-8 rounded-[16px] ghost-border transition-all hover:-translate-y-1">
+                    <div
+                        class="w-12 h-12 rounded-[8px] bg-secondary/10 flex items-center justify-center text-secondary mb-6">
+                        <i class="ph ph-magnifying-glass text-2xl"></i>
+                    </div>
+                    <h3 class="font-display text-on-surface font-semibold text-lg mb-3">Fuzzy Search</h3>
+                    <p class="text-on-surface/70 text-sm leading-relaxed"><code
+                            class="font-mono text-primary bg-void px-1.5 py-0.5 rounded">landpyre search</code> provides
+                        full-text search ranked by relevance across product, theme, region, and version.</p>
+                </div>
+                <div class="bg-surface-high p-8 rounded-[16px] ghost-border transition-all hover:-translate-y-1">
+                    <div
+                        class="w-12 h-12 rounded-[8px] bg-tertiary/10 flex items-center justify-center text-tertiary mb-6">
+                        <i class="ph ph-shield-check text-2xl"></i>
+                    </div>
+                    <h3 class="font-display text-on-surface font-semibold text-lg mb-3">Checksum Verification</h3>
+                    <p class="text-on-surface/70 text-sm leading-relaxed">MD5 verified during download. Command
+                        validates checksums and existence against generated manifests.</p>
+                </div>
+                <div class="bg-surface-high p-8 rounded-[16px] ghost-border transition-all hover:-translate-y-1">
+                    <div
+                        class="w-12 h-12 rounded-[8px] bg-primary/10 flex items-center justify-center text-primary mb-6">
+                        <i class="ph ph-download-simple text-2xl"></i>
+                    </div>
+                    <h3 class="font-display text-on-surface font-semibold text-lg mb-3">Resumable & Dry-runs</h3>
+                    <p class="text-on-surface/70 text-sm leading-relaxed">Preview file sizes with <code
+                            class="font-mono text-primary bg-void px-1.5 py-0.5 rounded">--dry-run</code>. Partial ZIPs
+                        are resumed automatically without data loss.</p>
+                </div>
+                <div class="bg-surface-high p-8 rounded-[16px] ghost-border transition-all hover:-translate-y-1">
+                    <div
+                        class="w-12 h-12 rounded-[8px] bg-secondary/10 flex items-center justify-center text-secondary mb-6">
+                        <i class="ph ph-file-code text-2xl"></i>
+                    </div>
+                    <h3 class="font-display text-on-surface font-semibold text-lg mb-3">Manifests & JSON</h3>
+                    <p class="text-on-surface/70 text-sm leading-relaxed">Save reproducible state to manifest files.
+                        Every command supports machine-readable output for pipelines.</p>
+                </div>
+                <div class="bg-surface-high p-8 rounded-[16px] ghost-border transition-all hover:-translate-y-1">
+                    <div
+                        class="w-12 h-12 rounded-[8px] bg-tertiary/10 flex items-center justify-center text-tertiary mb-6">
+                        <i class="ph ph-stethoscope text-2xl"></i>
+                    </div>
+                    <h3 class="font-display text-on-surface font-semibold text-lg mb-3">Diagnostics</h3>
+                    <p class="text-on-surface/70 text-sm leading-relaxed"><code
+                            class="font-mono text-primary bg-void px-1.5 py-0.5 rounded">landpyre doctor</code> checks
+                        environment, Python version, disk, network, SSL, and cache validity.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section id="install" class="py-24 max-w-4xl mx-auto px-4 sm:px-6">
+        <h2 class="font-display font-bold text-3xl text-on-surface mb-6">Installation</h2>
+        <p class="text-on-surface/80 mb-6 font-body">Requires Python ≥ 3.10. Internet access needed for <code
+                class="font-mono text-primary bg-surface-low px-1.5 py-0.5 rounded">refresh</code> (all other commands
+            work offline).</p>
+
+        <pre><code class="language-bash"># With pip
+pip install landpyre
+
+# With Parquet export support
+pip install "landpyre[parquet]"
+
+# From source (recommended during development)
+git clone https://github.com/samapriya/landpyre.git
+cd landpyre
+pip install -e ".[dev]"</code></pre>
+    </section>
+
+    <!-- Global Tab Switcher Context -->
+    <!-- Any changes to these tabs affect the Quick Start AND the Reference Section below -->
+
+    <!-- Quick Start Tabs Section -->
+    <section id="quickstart" class="py-24 bg-surface-low ghost-border-t ghost-border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="font-display font-bold text-3xl text-on-surface mb-12 text-center">Quick Start Workflow</h2>
+
+            <!-- Global Tab Navigation -->
+            <div class="flex justify-center mb-12">
+                <div class="bg-surface-high p-1.5 rounded-[12px] ghost-border inline-flex">
+                    <button onclick="setGlobalMode('cli')"
+                        class="mode-btn-cli px-6 py-2.5 rounded-[8px] text-sm font-semibold transition-all bg-surface-highest text-on-surface shadow-md flex items-center gap-2">
+                        <i class="ph ph-terminal-window text-lg"></i> CLI Interface
+                    </button>
+                    <button onclick="setGlobalMode('sdk')"
+                        class="mode-btn-sdk px-6 py-2.5 rounded-[8px] text-sm font-semibold transition-all text-on-surface/60 hover:text-on-surface hover:bg-surface-highest/50 flex items-center gap-2">
+                        <i class="ph ph-code text-lg"></i> Python SDK
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content Area -->
+            <div>
+                <!-- CLI Tab Content -->
+                <div class="mode-content-cli block animate-fade-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                        <div>
+                            <ol
+                                class="space-y-6 text-on-surface/80 font-body list-decimal list-outside ml-4 marker:text-tertiary marker:font-bold">
+                                <li class="pl-2"><strong class="text-on-surface">Fetch & cache catalogue:</strong><br />
+                                    <code
+                                        class="font-mono text-primary bg-surface-high px-2 py-1 rounded-[4px] text-sm mt-2 inline-block">landpyre refresh</code>
+                                </li>
+                                <li class="pl-2"><strong class="text-on-surface">Fuzzy search:</strong><br />
+                                    <code
+                                        class="font-mono text-primary bg-surface-high px-2 py-1 rounded-[4px] text-sm mt-2 inline-block">landpyre search "hawaii fuel 2022"</code>
+                                </li>
+                                <li class="pl-2"><strong class="text-on-surface">Browse with filters:</strong><br />
+                                    <code
+                                        class="font-mono text-primary bg-surface-high px-2 py-1 rounded-[4px] text-sm mt-2 inline-block">landpyre list --version "LF 2022" --region Hawaii</code>
+                                </li>
+                                <li class="pl-2"><strong class="text-on-surface">Save a manifest:</strong><br />
+                                    <code
+                                        class="font-mono text-primary bg-surface-high px-2 py-1 rounded-[4px] text-sm mt-2 inline-block">landpyre manifest -V "LF 2022" -r Hawaii -o hawaii.json</code>
+                                </li>
+                                <li class="pl-2"><strong class="text-on-surface">Preview & Download:</strong><br />
+                                    <code
+                                        class="font-mono text-primary bg-surface-high px-2 py-1 rounded-[4px] text-sm mt-2 inline-block">landpyre download -m hawaii.json --dry-run</code>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <!-- CLI Emulated Terminal -->
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="terminal-dots">
+                                    <div class="dot"></div>
+                                    <div class="dot"></div>
+                                    <div class="dot"></div>
+                                </div>
+                                <span class="mx-auto text-xs text-on-surface/50 font-mono">bash — landpyre</span>
+                            </div>
+                            <div class="terminal-body">
+                                <span class="text-secondary">$</span> <span class="text-on-surface">landpyre search
+                                    "hawaii fuel 2022"</span><br>
+                                <span class="text-tertiary mt-2 inline-block">🔎 Searching 842 records...</span><br><br>
+                                <span class="text-on-surface/50">1.00</span> <span
+                                    class="text-primary">LF2022_FBFM40_220_HI.zip</span> <span
+                                    class="text-on-surface/50">(1.2 GB)</span><br>
+                                <span class="text-on-surface/50"> Hawaii • LF 2022 • Fire Behavior</span><br>
+                                <span class="text-on-surface/50">0.92</span> <span
+                                    class="text-primary">LF2022_FBFM13_220_HI.zip</span> <span
+                                    class="text-on-surface/50">(850 MB)</span><br>
+                                <span class="text-on-surface/50"> Hawaii • LF 2022 • Fire Behavior</span><br>
+                                <br>
+                                <span class="text-secondary">$</span> <span class="text-on-surface">landpyre
+                                    stats</span><br>
+                                <span class="text-on-surface font-bold mt-2 inline-block">📊 LANDFIRE Catalogue
+                                    Statistics</span><br>
+                                <span class="text-on-surface/60">Total Files:</span> <span
+                                    class="text-secondary">842</span><br>
+                                <span class="text-on-surface/60">Total Size:</span> <span class="text-secondary">415.2
+                                    GB</span><br>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SDK Tab Content -->
+                <div class="mode-content-sdk hidden animate-fade-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                        <div>
+                            <pre class="!mt-0"><code class="language-python">from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter
+
+client = LandpyreClient()
+client.refresh() # No-op if cached
+
+# Fuzzy search
+results = client.search("hawaii fuel 2022")
+
+# Precise filter & save manifest
+items = client.get_items(
+    CatalogFilter(region="Hawaii", version="LF 2022")
+)
+manifest = client.save_manifest(items, "hawaii.json")
+
+# Preview, Download & Verify
+summary = client.dry_run(items, output_dir="./data")
+client.download(items, output_dir="./data", workers=4)
+client.verify(manifest, output_dir="./data")</code></pre>
+                        </div>
+
+                        <!-- Python Output Emulation -->
+                        <div class="terminal-window mt-6 lg:mt-0">
+                            <div class="terminal-header">
+                                <div class="terminal-dots">
+                                    <div class="dot"></div>
+                                    <div class="dot"></div>
+                                    <div class="dot"></div>
+                                </div>
+                                <span class="mx-auto text-xs text-on-surface/50 font-mono">python — output</span>
+                            </div>
+                            <div class="terminal-body">
+                                <span class="text-on-surface/50">>>></span> <span class="text-on-surface">for r in
+                                    results[:2]:</span><br>
+                                <span class="text-on-surface/50">...</span> <span class="text-on-surface">
+                                    print(f"{r.score:.0%} - {r.item.filename}")</span><br>
+                                <span class="text-on-surface/50">...</span><br>
+                                <span class="text-secondary">100% - LF2022_FBFM40_220_HI.zip</span><br>
+                                <span class="text-secondary">92% - LF2022_FBFM13_220_HI.zip</span><br>
+                                <br>
+                                <span class="text-on-surface/50">>>></span> <span class="text-on-surface">vr =
+                                    client.verify(manifest, "./data")</span><br>
+                                <span class="text-on-surface/50">>>></span> <span class="text-on-surface">print("All
+                                    OK!" if vr.all_ok else "Errors found")</span><br>
+                                <span class="text-secondary font-bold">All OK!</span><br>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Unified Reference Section (Controlled by the same global mode) -->
+    <section id="reference" class="py-24 max-w-5xl mx-auto px-4 sm:px-6">
+
+        <!-- Section Header changes based on Mode -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
+            <h2 class="mode-content-cli block font-display font-bold text-3xl text-on-surface">CLI Command Reference
+            </h2>
+            <h2 class="mode-content-sdk hidden font-display font-bold text-3xl text-on-surface animate-fade-in">Python
+                SDK Reference</h2>
+
+            <!-- Secondary Tab Switcher (Stays synced with main) -->
+            <div class="bg-surface-low p-1 rounded-[10px] ghost-border inline-flex self-start">
+                <button onclick="setGlobalMode('cli')"
+                    class="mode-btn-cli px-4 py-1.5 rounded-[6px] text-xs font-semibold transition-all bg-surface-highest text-on-surface shadow-md">
+                    CLI Mode
+                </button>
+                <button onclick="setGlobalMode('sdk')"
+                    class="mode-btn-sdk px-4 py-1.5 rounded-[6px] text-xs font-semibold transition-all text-on-surface/60 hover:text-on-surface">
+                    SDK Mode
+                </button>
+            </div>
+        </div>
+
+        <!-- CLI Reference Blocks -->
+        <div class="mode-content-cli space-y-8 block animate-fade-in">
+            <!-- Command Item -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <div class="mb-4">
+                    <code
+                        class="bg-surface-highest px-3 py-1.5 rounded-[8px] text-primary font-mono text-lg">landpyre search QUERY</code>
+                </div>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Fuzzy full-text search across product,
+                    theme, region, and version. Results are ranked by relevance score.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-bash">landpyre search "hawaii fuel"
+landpyre search "CONUS LF 2022" --limit 10
+landpyre search "fire behavior" --threshold 0.5</code></pre>
+            </div>
+
+            <!-- Command Item -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <div class="mb-4">
+                    <code
+                        class="bg-surface-highest px-3 py-1.5 rounded-[8px] text-primary font-mono text-lg">landpyre list & stats</code>
+                </div>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Browse the catalogue with exact/substring
+                    filters or view aggregate statistics.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-bash">landpyre list --version "LF 2022" --region "Hawaii" --limit 20
+landpyre stats --version "LF 2022"</code></pre>
+            </div>
+
+            <!-- Command Item -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <div class="mb-4">
+                    <code
+                        class="bg-surface-highest px-3 py-1.5 rounded-[8px] text-primary font-mono text-lg">landpyre manifest & download</code>
+                </div>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Save selections to a portable manifest,
+                    then perform multi-threaded, resumable downloads.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-bash">landpyre manifest --version "LF 2022" --region Hawaii -o hawaii.json
+landpyre download --manifest hawaii.json --dry-run
+landpyre download --manifest hawaii.json --output ./data --workers 6</code></pre>
+            </div>
+
+            <!-- Command Item -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <div class="mb-4">
+                    <code
+                        class="bg-surface-highest px-3 py-1.5 rounded-[8px] text-primary font-mono text-lg">landpyre doctor</code>
+                </div>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Run environment diagnostics (Python
+                    version, disk space, network, SSL/TLS, cache, zip support).</p>
+                <pre class="!mt-0 !mb-0"><code class="language-bash">landpyre doctor
+landpyre doctor --json</code></pre>
+            </div>
+        </div>
+
+        <!-- SDK Reference Blocks (Rich Content from sdk_examples.py) -->
+        <div class="mode-content-sdk space-y-8 hidden animate-fade-in">
+            <!-- SDK Block 1 -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <h3 class="font-display font-semibold text-xl text-on-surface mb-3 flex items-center gap-2"><i
+                        class="ph ph-plug text-primary"></i> 1. Setup & Client Exploration</h3>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Initialize the client, populate the local
+                    cache from USGS, and explore snapshot metadata.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-python">from landpyre import LandpyreClient
+
+client = LandpyreClient()
+
+# refresh() is a no-op if a valid cache already exists.
+# Pass force=True to always re-scrape.
+snapshot = client.refresh()
+
+print(f"Cache contains {snapshot.item_count} items.")
+print(f"Last scraped: {snapshot.last_run}")
+print(f"Schema version: {snapshot.schema_version}")</code></pre>
+            </div>
+
+            <!-- SDK Block 2 -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <h3 class="font-display font-semibold text-xl text-on-surface mb-3 flex items-center gap-2"><i
+                        class="ph ph-funnel text-secondary"></i> 2. Filtering & Fuzzy Search</h3>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Use <code
+                        class="font-mono text-primary bg-surface-lowest px-1 rounded">CatalogFilter</code> for precise
+                    lookups, or perform ranked fuzzy searches across multiple fields simultaneously.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-python">from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter, FilterMode
+
+client = LandpyreClient()
+
+# refresh() is a no-op if a valid cache already exists.
+# Pass force=True to always re-scrape.
+client.refresh()
+
+# Precise Regex filtering
+f_regex = CatalogFilter(version=r"LF 202[234]", mode=FilterMode.REGEX)
+items = client.get_items(f_regex)
+
+# Ranked fuzzy search across product, theme, region, and version
+results = client.search("hawaii fuel 2022", threshold=0.6)
+
+for r in results[:3]:
+    print(f"{r.score:.0%} - {r.item.filename}")</code></pre>
+            </div>
+
+            <!-- SDK Block 3 -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <h3 class="font-display font-semibold text-xl text-on-surface mb-3 flex items-center gap-2"><i
+                        class="ph ph-file-json text-tertiary"></i> 3. Manifests & Dry-runs</h3>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Preview total payload sizes before
+                    committing to network IO, and save desired states to portable manifests.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-python">from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter
+
+client = LandpyreClient()
+client.refresh()
+
+# Filter items to work with
+items = client.get_items(CatalogFilter(region="Hawaii", version="LF 2022"))
+
+# 1. Save state to manifest
+manifest_path = "hawaii_lf2022.json"
+manifest = client.save_manifest(items, path=manifest_path)
+
+# 2. Dry run to calculate total payload
+summary = client.dry_run(items, output_dir="./data")
+print(f"Files to download : {summary['item_count']}")
+print(f"Total size        : {summary['total_bytes_fmt']}")
+
+# 3. Load state back later
+loaded = client.load_manifest(manifest_path)</code></pre>
+            </div>
+
+            <!-- SDK Block 4 -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <h3 class="font-display font-semibold text-xl text-on-surface mb-3 flex items-center gap-2"><i
+                        class="ph ph-download-simple text-primary"></i> 4. Downloads & Verification</h3>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Initiate multi-threaded downloads. The
+                    command automatically handles resumable partial zips and runs a post-download MD5 check.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-python">from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter
+
+client = LandpyreClient()
+client.refresh()
+
+# Setup items and manifest for download
+items = client.get_items(CatalogFilter(region="Hawaii", version="LF 2022"))
+manifest_path = "hawaii_lf2022.json"
+client.save_manifest(items, path=manifest_path)
+
+# Resumeable multi-threaded download
+results = client.download(items, output_dir="./data", workers=4)
+
+# Post-download integrity verification against the manifest
+vr = client.verify(manifest_path, output_dir="./data")
+
+print(f"All OK        : {vr.all_ok}")
+print(f"Files missing : {vr.files_missing}")
+print(f"Files corrupt : {vr.files_corrupt}")</code></pre>
+            </div>
+
+            <!-- SDK Block 5 -->
+            <div class="bg-surface-high p-8 rounded-[16px] ghost-border">
+                <h3 class="font-display font-semibold text-xl text-on-surface mb-3 flex items-center gap-2"><i
+                        class="ph ph-export text-secondary"></i> 5. Exporting Catalog Metadata</h3>
+                <p class="text-on-surface/80 mb-6 font-body leading-relaxed">Export subsets of the LANDFIRE catalog
+                    natively into machine-readable formats for external data analysis.</p>
+                <pre class="!mt-0 !mb-0"><code class="language-python">from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter
+
+client = LandpyreClient()
+client.refresh()
+
+items = client.get_items(CatalogFilter(version="LF 2022"))
+
+# Standard exports
+client.export(items, format="json", path="lf2022.json")
+client.export(items, format="csv",  path="lf2022.csv")
+client.export(items, format="markdown", path="lf2022.md")
+
+# Parquet (Requires `pip install "landpyre[parquet]"`)
+client.export(items, format="parquet", path="lf2022.parquet")</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-16 bg-surface-low ghost-border-t text-center text-on-surface/50 text-sm font-body">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col items-center justify-center gap-6">
+
+                <!-- Logo -->
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-fire text-tertiary text-xl"></i>
+                    <span class="font-display font-bold text-on-surface tracking-widest uppercase">landpyre</span>
+                </div>
+
+                <!-- Socials -->
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/samapriya" target="_blank"
+                        class="text-on-surface/50 hover:text-primary transition-colors">
+                        <i class="ph ph-github-logo text-2xl"></i>
+                    </a>
+                    <a href="https://linkedin.com/in/samapriya" target="_blank"
+                        class="text-on-surface/50 hover:text-[#0a66c2] transition-colors">
+                        <i class="ph ph-linkedin-logo text-2xl"></i>
+                    </a>
+                </div>
+
+                <!-- Copyright -->
+                <p>Apache 2.0 License &copy; Made and Built by Samapriya Roy. Built with Pydantic, Click, and Rich.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Prism.js core and bash/python languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+
+    <script>
+        // Copy to clipboard functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const preTags = document.querySelectorAll('pre');
+
+            preTags.forEach(pre => {
+                const button = document.createElement('button');
+                button.className = 'copy-button';
+                button.innerHTML = '<i class="ph ph-copy"></i> Copy';
+
+                button.addEventListener('click', () => {
+                    const code = pre.querySelector('code');
+                    const text = code ? code.innerText : pre.innerText;
+
+                    navigator.clipboard.writeText(text).then(() => {
+                        button.innerHTML = '<i class="ph ph-check text-secondary"></i> Copied!';
+                        setTimeout(() => {
+                            button.innerHTML = '<i class="ph ph-copy"></i> Copy';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy: ', err);
+                        // Fallback
+                        const textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand("Copy");
+                        textArea.remove();
+                        button.innerHTML = '<i class="ph ph-check text-secondary"></i> Copied!';
+                        setTimeout(() => {
+                            button.innerHTML = '<i class="ph ph-copy"></i> Copy';
+                        }, 2000);
+                    });
+                });
+
+                pre.appendChild(button);
+            });
+        });
+
+        // Global Tab Switching Logic (Syncs Quick Start and Reference Sections)
+        function setGlobalMode(mode) {
+            const activeClass = ['bg-surface-highest', 'text-on-surface', 'shadow-md'];
+            const inactiveClass = ['text-on-surface/60', 'hover:text-on-surface', 'hover:bg-surface-highest/50', 'bg-transparent'];
+
+            // Update CLI buttons
+            document.querySelectorAll('.mode-btn-cli').forEach(btn => {
+                if (mode === 'cli') {
+                    btn.classList.remove(...inactiveClass);
+                    btn.classList.add(...activeClass);
+                } else {
+                    btn.classList.remove(...activeClass);
+                    btn.classList.add(...inactiveClass);
+                }
+            });
+
+            // Update SDK buttons
+            document.querySelectorAll('.mode-btn-sdk').forEach(btn => {
+                if (mode === 'sdk') {
+                    btn.classList.remove(...inactiveClass);
+                    btn.classList.add(...activeClass);
+                } else {
+                    btn.classList.remove(...activeClass);
+                    btn.classList.add(...inactiveClass);
+                }
+            });
+
+            // Update CLI Content Containers
+            document.querySelectorAll('.mode-content-cli').forEach(el => {
+                if (mode === 'cli') {
+                    el.classList.remove('hidden');
+                    el.classList.add('block');
+                } else {
+                    el.classList.add('hidden');
+                    el.classList.remove('block');
+                }
+            });
+
+            // Update SDK Content Containers
+            document.querySelectorAll('.mode-content-sdk').forEach(el => {
+                if (mode === 'sdk') {
+                    el.classList.remove('hidden');
+                    el.classList.add('block');
+                } else {
+                    el.classList.add('hidden');
+                    el.classList.remove('block');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

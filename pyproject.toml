@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "landpyre"
+version = "0.2.0"
+description = "LANDFIRE data discovery, search, and download SDK + CLI."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["landfire", "gis", "geospatial", "cli", "sdk", "downloader"]
+
+dependencies = [
+    "click>=8.3.1",
+    "rich>=14.3.3",
+    "requests>=2.32",
+    "beautifulsoup4>=4.12",
+    "pydantic>=2.0",
+]
+
+[project.scripts]
+landpyre = "landpyre.cli:cli"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "responses>=0.25",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "tomli-w>=1.0",       # writing config.toml on Python < 3.11
+]
+parquet = [
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+]
+config = [
+    "tomli-w>=1.0",       # only needed if you use `landpyre config set`
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

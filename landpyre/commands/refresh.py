@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import click
 from landpyre import cache
-from landpyre.errors import CacheSchemaMismatchError, ScraperError
+from landpyre.errors import (CacheNotFoundError, CacheSchemaMismatchError,
+                             ScraperError)
 from landpyre.scraper import check_scraper_health, scrape_catalogue
 from landpyre.ui.banner import STYLE_ERR, STYLE_OK, STYLE_WARN
 from rich.console import Console
@@ -65,7 +66,7 @@ def refresh(force: bool, check_scraper: bool, as_json: bool) -> None:
                     )
                 )
             return
-        except (FileNotFoundError, CacheSchemaMismatchError):
+        except (FileNotFoundError, CacheNotFoundError, CacheSchemaMismatchError):
             pass  # No valid cache — proceed with scrape
 
     console.print()

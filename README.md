@@ -1,17 +1,29 @@
+<div align="center">
+
+<img src="https://i.imgur.com/bgpXO7o.png" alt="landpyre logo" width="160" style="border-radius: 50%;" />
+
 # 🔥 landpyre
 
-> **Discover & Download USGS LANDFIRE Data**
+**Discover & Download USGS LANDFIRE Data**
 
-A modern, fast, and beautiful **SDK + CLI** for discovering, filtering, searching, and downloading [LANDFIRE](https://www.landfire.gov/) geospatial datasets. Built with [Pydantic](https://docs.pydantic.dev/), [Click](https://click.palletsprojects.com/), and [Rich](https://github.com/Textualize/rich).
+*Unofficial CLI and SDK for LANDFIRE data — discover, filter, search, and download geospatial datasets with ease.*
 
-```
-  _                    _
- | |    __ _ _ __   __| |_ __  _   _ _ __ ___
- | |   / _` | '_ \ / _` | '_ \| | | | '__/ _ \
- | |__| (_| | | | | (_| | |_) | |_| | | |  __/
- |_____\__,_|_| |_|\__,_| .__/ \__, |_|  \___|
-                         |_|    |___/
-```
+[![PyPI version](https://img.shields.io/pypi/v/landpyre?color=%23ecc328&label=pypi&logo=pypi&logoColor=white)](https://pypi.org/project/landpyre/)
+[![Python](https://img.shields.io/pypi/pyversions/landpyre?color=%2398cbff&logo=python&logoColor=white)](https://pypi.org/project/landpyre/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green?logo=apache&logoColor=white)](https://github.com/samapriya/landpyre/blob/main/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-landpyre.geocarpentry.org-blue?logo=readthedocs&logoColor=white)](https://landpyre.geocarpentry.org)
+
+[**Documentation**](https://landpyre.geocarpentry.org) · [**GitHub**](https://github.com/samapriya/landpyre) · [**Issues**](https://github.com/samapriya/landpyre/issues)
+
+</div>
+
+---
+
+## Overview
+
+**landpyre** is a modern, typed SDK and CLI for working with [LANDFIRE](https://www.landfire.gov/) geospatial datasets published by the USGS. It handles catalog discovery, fuzzy search, manifest-based reproducible downloads, checksum verification, and data export — all from the terminal or Python.
+
+Built with [Pydantic](https://docs.pydantic.dev/), [Click](https://click.palletsprojects.com/), and [Rich](https://github.com/Textualize/rich).
 
 ---
 
@@ -27,7 +39,6 @@ A modern, fast, and beautiful **SDK + CLI** for discovering, filtering, searchin
 - **`--dry-run`** on download — preview files and total size without hitting the network
 - **`--open`** on download — open the output folder in your file explorer after completion
 - **`--json`** on every command — machine-readable output for scripting
-- **`--check-scraper`** on refresh — validate that the scraper is parsing the page correctly
 - **Schema versioning** — stale caches are detected and prompt a helpful `refresh`
 - **Resumable downloads** — partial ZIPs are continued from where they left off
 - **Checksum verification** — MD5 verified during download when available
@@ -37,23 +48,23 @@ A modern, fast, and beautiful **SDK + CLI** for discovering, filtering, searchin
 ## Installation
 
 ```bash
-# From source (recommended during development)
-git clone https://github.com/samapriya/landpyre.git
-cd landpyre
-pip install -e ".[dev]"
-
-# With pip (once published)
+# Standard install
 pip install landpyre
 
 # With Parquet export support
 pip install "landpyre[parquet]"
+
+# From source (development)
+git clone https://github.com/samapriya/landpyre.git
+cd landpyre
+pip install -e ".[dev]"
 ```
 
 **Requirements:** Python ≥ 3.10, internet access for `refresh` (all other commands work offline).
 
 ---
 
-## CLI quick start
+## CLI Quick Start
 
 ```bash
 # 1. Fetch and cache the full LANDFIRE catalogue
@@ -71,7 +82,7 @@ landpyre stats
 # 5. Save a manifest for reproducible downloads
 landpyre manifest --version "LF 2022" --region Hawaii -o hawaii.json
 
-# 6. Preview what will be downloaded
+# 6. Preview what will be downloaded (no network I/O)
 landpyre download --manifest hawaii.json --dry-run
 
 # 7. Download
@@ -86,48 +97,113 @@ landpyre doctor
 
 ---
 
-## SDK quick start
+## SDK Quick Start
+
+### 1. Setup & Client Exploration
 
 ```python
 from landpyre import LandpyreClient
 
 client = LandpyreClient()
 
-# Refresh the catalogue (no-op if already cached)
+# refresh() is a no-op if a valid cache already exists.
+# Pass force=True to always re-scrape.
+snapshot = client.refresh()
+
+print(f"Cache contains {snapshot.item_count} items.")
+print(f"Last scraped: {snapshot.last_run}")
+print(f"Schema version: {snapshot.schema_version}")
+```
+
+### 2. Filtering & Fuzzy Search
+
+```python
+from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter, FilterMode
+
+client = LandpyreClient()
 client.refresh()
 
-# Fuzzy search
-results = client.search("hawaii fuel 2022")
-for r in results:
-    print(f"{r.score:.0%}  {r.item.display_label}")
+# Precise regex filtering
+f_regex = CatalogFilter(version=r"LF 202[234]", mode=FilterMode.REGEX)
+items = client.get_items(f_regex)
 
-# Precise filter
+# Ranked fuzzy search across product, theme, region, and version
+results = client.search("hawaii fuel 2022", threshold=0.6)
+
+for r in results[:3]:
+    print(f"{r.score:.0%} - {r.item.filename}")
+```
+
+### 3. Manifests & Dry-runs
+
+```python
+from landpyre import LandpyreClient
 from landpyre.models import CatalogFilter
+
+client = LandpyreClient()
+client.refresh()
+
 items = client.get_items(CatalogFilter(region="Hawaii", version="LF 2022"))
 
-# Save a reproducible manifest
-manifest = client.save_manifest(items, path="hawaii.json")
+# Save state to manifest
+manifest = client.save_manifest(items, path="hawaii_lf2022.json")
 
-# Preview without downloading
+# Dry run to calculate total payload
 summary = client.dry_run(items, output_dir="./data")
-print(f"Would download {summary['item_count']} files ({summary['total_bytes_fmt']})")
+print(f"Files to download : {summary['item_count']}")
+print(f"Total size        : {summary['total_bytes_fmt']}")
 
-# Download
+# Load state back later
+loaded = client.load_manifest("hawaii_lf2022.json")
+```
+
+### 4. Downloads & Verification
+
+```python
+from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter
+
+client = LandpyreClient()
+client.refresh()
+
+items = client.get_items(CatalogFilter(region="Hawaii", version="LF 2022"))
+client.save_manifest(items, path="hawaii_lf2022.json")
+
+# Resumable multi-threaded download
 results = client.download(items, output_dir="./data", workers=4)
-ok = [r for r in results if r.ok]
-print(f"{len(ok)} files downloaded")
 
-# Verify
-vr = client.verify(manifest, output_dir="./data")
-print("All OK!" if vr.all_ok else f"{vr.files_missing} missing, {vr.files_corrupt} corrupt")
+# Post-download integrity verification against the manifest
+vr = client.verify("hawaii_lf2022.json", output_dir="./data")
 
-# Export catalogue subset
-client.export(items, format="csv", path="hawaii_lf2022.csv")
+print(f"All OK        : {vr.all_ok}")
+print(f"Files missing : {vr.files_missing}")
+print(f"Files corrupt : {vr.files_corrupt}")
+```
+
+### 5. Exporting Catalog Metadata
+
+```python
+from landpyre import LandpyreClient
+from landpyre.models import CatalogFilter
+
+client = LandpyreClient()
+client.refresh()
+
+items = client.get_items(CatalogFilter(version="LF 2022"))
+
+# Standard exports
+client.export(items, format="json",     path="lf2022.json")
+client.export(items, format="csv",      path="lf2022.csv")
+client.export(items, format="markdown", path="lf2022.md")
+
+# Parquet (requires `pip install "landpyre[parquet]"`)
+client.export(items, format="parquet",  path="lf2022.parquet")
 ```
 
 ---
 
-## Commands
+## CLI Reference
 
 ### `landpyre refresh`
 
@@ -184,19 +260,6 @@ landpyre list --region "CONUS" --json
 
 ---
 
-### `landpyre stats`
-
-Rich statistics: total file count, aggregate size, per-version breakdown.
-
-```bash
-landpyre stats
-landpyre stats --version "LF 2022"
-landpyre stats --region "Hawaii"
-landpyre stats --json
-```
-
----
-
 ### `landpyre manifest`
 
 Save a filtered selection to a portable `manifest.json`.
@@ -216,28 +279,6 @@ landpyre manifest --show manifest.json        # Inspect an existing manifest
 | `--show` | `-s` | Inspect an existing manifest |
 | `--json` | | Output as JSON |
 
-**Manifest file structure:**
-
-```json
-{
-  "schema_version": 2,
-  "created_at": "2025-06-15T14:32:01+00:00",
-  "source_cache_timestamp": "2025-06-15 14:30:00 PDT",
-  "item_count": 12,
-  "items": [
-    {
-      "download_url": "https://www.landfire.gov/data-downloads/...",
-      "filename": "LF2022_FBFM40_220_HI.zip",
-      "region": "Hawaii",
-      "version": "LF 2022",
-      "product": "FBFM40",
-      "file_size": "1.2 GB",
-      "checksum": "abc123..."
-    }
-  ]
-}
-```
-
 ---
 
 ### `landpyre download`
@@ -249,7 +290,6 @@ landpyre download --version "LF 2022" --output lf2022
 landpyre download --manifest manifest.json --output ./data
 landpyre download --region "CONUS" --dry-run          # Preview only
 landpyre download --manifest hawaii.json --yes --open # Skip confirm, open folder
-landpyre download --version "LF 2024" --json          # Machine-readable result
 ```
 
 | Flag | Short | Default | Description |
@@ -307,23 +347,21 @@ landpyre config set auto_confirm true
 
 ### `landpyre doctor`
 
-Run environment diagnostics.
+Run environment diagnostics: Python version, disk space, network reachability, SSL/TLS, cache existence, directory permissions, config validity, ZIP support, and Pydantic installation.
 
 ```bash
 landpyre doctor
 landpyre doctor --json
 ```
 
-Checks: Python version, disk space, network reachability, SSL/TLS, cache existence, cache directory permissions, config file validity, ZIP support, Pydantic installation.
-
 ---
 
-## SDK reference
+## SDK Reference
 
 ### `LandpyreClient`
 
 ```python
-from landpyre import LandpyreClient, CatalogFilter
+from landpyre import LandpyreClient
 
 client = LandpyreClient(
     cache_dir=None,   # override cache location
@@ -346,7 +384,7 @@ client = LandpyreClient(
 | `verify(manifest, output_dir)` | `ValidationResult` | Integrity check |
 | `export(items, format, path)` | `Path` | Export to file |
 
-### Key models
+### Key Models
 
 ```python
 from landpyre.models import (
@@ -360,70 +398,22 @@ from landpyre.models import (
 )
 ```
 
-### Export formats
-
-```python
-client.export(items, format="json",     path="out.json")
-client.export(items, format="csv",      path="out.csv")
-client.export(items, format="markdown", path="out.md")
-client.export(items, format="parquet",  path="out.parquet")  # requires [parquet] extra
-```
-
----
-
-## Filtering logic
+### Filtering Logic
 
 All filters are **case-insensitive** and **ANDed** together.
 
 ```python
 from landpyre.models import CatalogFilter, FilterMode
 
-# Substring (default)
-CatalogFilter(region="haw")                 # matches "Hawaii"
-
-# Exact
-CatalogFilter(region="Hawaii", mode=FilterMode.EXACT)
-
-# Regex
-CatalogFilter(version=r"LF 202[234]", mode=FilterMode.REGEX)
-
-# Fuzzy (token overlap)
-CatalogFilter(product="fbfm", mode=FilterMode.FUZZY, fuzzy_threshold=0.5)
+CatalogFilter(region="haw")                                    # Substring (default)
+CatalogFilter(region="Hawaii", mode=FilterMode.EXACT)          # Exact
+CatalogFilter(version=r"LF 202[234]", mode=FilterMode.REGEX)   # Regex
+CatalogFilter(product="fbfm", mode=FilterMode.FUZZY, fuzzy_threshold=0.5)  # Fuzzy
 ```
 
 ---
 
-## Cache file structure (v2)
-
-```json
-{
-  "schema_version": 2,
-  "last_run": "2025-06-15 14:32:01 PDT",
-  "item_count": 842,
-  "scrape_url": "https://www.landfire.gov/data/FullExtentDownloads?...",
-  "items": [
-    {
-      "theme": "Fire Behavior",
-      "product": "FBFM40",
-      "region_version": "Hawaii LF 2022",
-      "region": "Hawaii",
-      "version": "LF 2022",
-      "file_size": "1.2 GB",
-      "checksum": "d41d8cd98f00b204e9800998ecf8427e",
-      "download_url": "https://www.landfire.gov/data-downloads/...",
-      "source_page": 3,
-      "scrape_timestamp": "2025-06-15T21:32:00+00:00",
-      "parser_version": "0.2.0"
-    }
-  ]
-}
-```
-
-If your cache was written by v0.1.0 (schema version 1), landpyre will ask you to run `landpyre refresh` to rebuild it.
-
----
-
-## Output structure
+## Output Structure
 
 ```
 landfire_output/
@@ -434,3 +424,20 @@ landfire_output/
 ```
 
 ZIP files are downloaded to `.tmp_zips/`, TIFs are extracted flat into `tif/`, and the ZIPs are removed automatically.
+
+---
+
+## Links
+
+- **Documentation:** [landpyre.geocarpentry.org](https://landpyre.geocarpentry.org)
+- **GitHub:** [github.com/samapriya/landpyre](https://github.com/samapriya/landpyre)
+- **PyPI:** [pypi.org/project/landpyre](https://pypi.org/project/landpyre/)
+- **Issues:** [github.com/samapriya/landpyre/issues](https://github.com/samapriya/landpyre/issues)
+
+---
+
+<div align="center">
+
+Apache 2.0 License · Built by [Samapriya Roy](https://github.com/samapriya) · Powered by Pydantic, Click, and Rich
+
+</div>

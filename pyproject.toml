@@ -4,12 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "landpyre"
-version = "0.2.1"
+version = "0.2.2"
 description = "LANDFIRE data discovery, search, and download SDK + CLI."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = "Apache-2.0"
 keywords = ["landfire", "gis", "geospatial", "cli", "sdk", "downloader"]
+
+authors = [
+    { name = "Samapriya Roy", email = "samapriya.roy@gmail.com" }
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Utilities",
+    "Environment :: Console",
+]
 
 dependencies = [
     "click>=8.3.1",
@@ -18,6 +35,13 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "pydantic>=2.0",
 ]
+
+[project.urls]
+Homepage        = "https://landpyre.geocarpentry.org"
+Documentation   = "https://landpyre.geocarpentry.org"
+Repository      = "https://github.com/samapriya/landpyre"
+"Bug Tracker"   = "https://github.com/samapriya/landpyre/issues"
+Changelog       = "https://github.com/samapriya/landpyre/releases"
 
 [project.scripts]
 landpyre = "landpyre.cli:cli"
@@ -29,14 +53,14 @@ dev = [
     "responses>=0.25",
     "ruff>=0.4",
     "mypy>=1.10",
-    "tomli-w>=1.0",       # writing config.toml on Python < 3.11
+    "tomli-w>=1.0",
 ]
 parquet = [
     "pandas>=2.0",
     "pyarrow>=14.0",
 ]
 config = [
-    "tomli-w>=1.0",       # only needed if you use `landpyre config set`
+    "tomli-w>=1.0",
 ]
 
 [tool.setuptools.packages.find]

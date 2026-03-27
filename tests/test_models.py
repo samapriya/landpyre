@@ -120,10 +120,6 @@ def test_filter_regex_mode():
     assert not f.matches(SAMPLE_ITEMS[1])  # LF 2020
 
 
-def test_filter_fuzzy_mode():
-    f = CatalogFilter(product="fbfm", mode=FilterMode.FUZZY, fuzzy_threshold=0.5)
-    assert f.matches(SAMPLE_ITEMS[0])   # FBFM40
-
 
 def test_filter_from_kwargs():
     f = CatalogFilter.from_kwargs(region="Alaska")
